@@ -6,6 +6,10 @@ Our project has three phases.
 
 Collect yelp business.json and review.json. Drop all businesses not in AZ or PA and merge the datasets. Drop all reviews that are not in english and drop all reviews of businesses that are not restaurants. 
 
+merge2.json is the product of data-extract-category.json. 
+
+Please see: https://drive.google.com/file/d/1nrvE_7WbR2VeJqeBTZKas66GDb9ay8hV/view?usp=sharing for the data. 
+
 ## Phase 2: Review Classification
 
 Use supervised machine learning techniques to build a review classifier. The classifier will separate reviews into reviews about food, reviews about service
