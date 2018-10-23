@@ -12,7 +12,14 @@ Please see: https://drive.google.com/file/d/1nrvE_7WbR2VeJqeBTZKas66GDb9ay8hV/vi
 
 ## Phase 2: Review Classification
 
-Use supervised machine learning techniques to build a review classifier. The classifier will separate reviews into reviews about food, reviews about service
+Use supervised machine learning techniques to build a review classifier. The classifier will separate reviews into reviews about food, reviews about service, both or none. 
+
+We will encode the text data using Bag of Words/TFIDF, 2-gram, 3-gram, Wordnet to classify words such as food specific words
+
+We will try the following algorithms: KNN, Decision Tree, SVM
+
+Reviews that are classified as none will be dropped
+Reviews that are classified as both will be separated into clauses and then each clause will be reclassified. 
 
 
 ## Phase 3: More granular studies. 
