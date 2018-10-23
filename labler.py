@@ -53,5 +53,5 @@ if __name__ == "__main__":
     print("----------\nLabeling Reviews \nDictionary: \ns = service \nf = food \nb = both \nn = none" )
     print("----------\nPlease ignore what I said earlier. If there is any combination of food and service, label it as both. We will deal with the both's seperately \n----------")
     with open("merge2.json","r") as f:
-        with open("labeled_reviews.json","w+") as w:
+        with open("labeled_reviews.json","a") as w:
             label(f, w, i, j)
