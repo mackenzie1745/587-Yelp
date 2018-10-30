@@ -14,9 +14,16 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize 
 from nltk.stem import WordNetLemmatizer
 from nltk.stem import PorterStemmer
+from nltk.corpus import genesis
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import normalize
 from nltk.corpus import wordnet as wn
+from sklearn import decomposition
 import string
+
+from sklearn.cluster import KMeans
+import numpy as np
+import matplotlib.pyplot as plt
 
 def parse_json(line):
     j = json.loads(line)
@@ -40,7 +47,6 @@ def load_data(i=1, k=150000): ## loads data indexed from i to k.  Defaults to wh
 
 def drop_stop_words(reviews): # drops stop words
     stop_words = set(stopwords.words('english')) 
-    stop_words.add("The")
     stop_words.add("I")
 
     stop_words.remove("not") # not may be important for analysis
@@ -51,6 +57,7 @@ def drop_stop_words(reviews): # drops stop words
         tokens = review.split()
         review_no_stop_string = ""
         for token in tokens:
+            token = token.lower()
             if token not in stop_words:
                 if len(review_no_stop_string) == 0:
                     review_no_stop_string = token
@@ -158,12 +165,139 @@ def tag_hypernyms(reviews):
     return full_list_of_hypernums
 
 
-## OPTIONAL
+def tag_hypernyms_with_adjustments(reviews):
+    pass
+    """ 
+    Goal: drop hypernyms that don't matter
+    """
+
+def food_serv_sim_vec(reviews, test = False, vtest = False):
+    reviews = drop_stop_words(reviews) # drop the stop words as a preprocessing step
+    food_words = wn.synsets("food") # as in "food or drink"
+    service_words = [wn.synsets("waiter")[0],wn.synsets("service")[14]] # this version of service is what we meant
+    location_word = wn.synsets("location")[0] # to avoid things like diner, restaurant, etc. 
+    result_word = wn.synsets("result")[0] # gets rid of "worst"
+    final_list = [] # this will be returned
+    for review in reviews:
+        review = review.split() # tokenize each review
+        noun_count = 0
+        food_scores = []
+        service_scores = []
+        for word in review:
+            #preprocess the token
+            punct_strip = str.maketrans('', '', string.punctuation)
+            word = word.translate(punct_strip)
+            word = word.lower()
+            
+            # Crete arrays to fill with similarity values
+            # we do this because we will have lots of  words in the synset, and we will grab the 
+            #max similarity value for each of these
+            similarities_food = []
+            similarities_serv = []
+            similarities_loc = []
+            similarities_result= []
+
+            
+            syns = wn.synsets(word, pos="n") # we only want to look at nouns because 
+            # a) they are most informative and b) wup trips up on other parts of speech
+            
+            
+            if len(syns) > 0:
+                noun_count = noun_count + 1
+
+                for w1 in syns:
+                    similarities_food.append(max( w1.wup_similarity(food_words[0]),
+                                                 w1.wup_similarity(food_words[1]))) 
+                    similarities_serv.append(max(w1.wup_similarity(service_words[0]), 
+                                                 w1.wup_similarity(service_words[1])))
+                    similarities_loc.append( w1.wup_similarity(location_word))
+                    similarities_result.append(w1.wup_similarity(result_word))
+
+                     #word_vec.append([])
+                sim_food = max(similarities_food)
+                sim_serv = max(similarities_serv)
+                sim_loc = max(similarities_loc)
+                sim_res = max(similarities_result)
+                
+                if(vtest):
+                    print(word + " FOOD: " + str(sim_food) + " SERV: " + str(sim_serv) + " LOC " + str(sim_loc))
+                    print("----")
+                if sim_loc > sim_serv and sim_loc > sim_food:
+                    pass
+                elif sim_res > sim_serv and sim_res > sim_food:
+                    pass
+                elif sim_food > sim_serv + .3 or sim_food > .6: # experimentally, food items have this high similarity, but sometimes come to close to service, so we adjust
+                    food_scores.append(10*(sim_food))
+                    if(test): 
+                        print("food: " + word) 
+                elif sim_serv > sim_food + .3:
+                    service_scores.append(10*(sim_serv))
+                    if (test):
+                        print("service: " + word)
+
+        if noun_count: 
+            final_list.append([sum(food_scores)/noun_count, sum(service_scores)/noun_count])
+        else:
+            final_list.append([sum(food_scores), sum(service_scores)])
+
+    return final_list
+
+    
+def food_serv_sim_vec_nationality(reviews):
+    pass    
+
+def reward_food_words(reviews):
+    foods = []
+    food_adjectives = []
+    pass
+
 def tag_embedding(reviews):
     pass
     
+def working_space(reviews): ## JUST RANDOM PLACE TO MESS AROUND
+    big_array = bag_words(reviews)
+    w_norm = np.normalize(big_array)
+    
+    
+    h = food_serv_sim_vec(reviews)
+    dt=np.dtype('float','float') 
+    h_1 = np.array(h,dtype=dt)
+    norm_h = normalize(h_1)
+    kmeans = KMeans(n_clusters=2)
+    kmeans.fit(h_1)
+    y_km = kmeans.fit_predict(norm_h)
+
+        
+    plt.scatter(x=h_1[:,0], y=h_1[:,1], c=y_km)    
+    
+    big_array = big_array.astype(float)
+    final_big_array = np.array(float)
+    
+    
+    for i in range(len(big_array)):
+         x = np.append(big_array[i], [h_1[i,0], h_1[i,1]])
+         if i == 0:
+            final_big_array = x
+         else:
+            final_big_array = np.vstack([final_big_array, x])
+    
+    f_norm = normalize(final_big_array)
+    kmeans = KMeans(n_clusters=2)
+    pca2D = decomposition.PCA(2)
+    plot_columns = pca2D.fit_transform(f_norm)
+    
+    
+    kmeans.fit(f_norm)
+    y_km = kmeans.fit_predict(f_norm)
+    plt.scatter(x=plot_columns[:,0], y=plot_columns[:,1], c=y_km)    
+
+    for i in range(370,500):
+        x = food_serv_sim_vec([reviews[i]])
+        if (x[0][0] > x[0][1]):
+            print(reviews[i])
+            print(x)
+            break
+    
 if __name__ == "__main__":
-    reviews = load_review_text(1, 800)
-    l = tag_hypernyms(reviews)
-    l_proc = preprocess_hypernyms(l)
+    reviews = load_review_text(1, 500)
     
